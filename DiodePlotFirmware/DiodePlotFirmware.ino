@@ -10,11 +10,24 @@
 
 void setup()
 {
+    PIND   = BINARY(0,0,0,0,0,0,0,0);       // disable all pullup resistors on D register
+    PORTD  = BINARY(0,0,0,0,0,0,0,0);       // turn off all output pins on D register
     DDRD   = BINARY(1,1,1,1,1,1,1,1);       // all D register pins are outputs
-    PORTD  = BINARY(0,0,0,0,0,0,0,0);       // disable pullup resistors on all outputs
+
+    Serial.begin(115200);
 }
 
 void loop()
 {
+    ++PORTD;
+    delay(50);
+    int v1 = analogRead(0);     // op-amp output voltage
+    int v2 = analogRead(1);     // voltage on diode's anode
 
+    Serial.print((int)PORTD);
+    Serial.print(" ");
+    Serial.print(v1);
+    Serial.print(" ");
+    Serial.print(v2);
+    Serial.println();
 }

@@ -1,0 +1,1 @@
+diode_001.txt   [green-yellow diode #1]
