@@ -17,17 +17,32 @@ RunState state = WAITING;
 int trial = 0;
 int limit = 10;
 int accum;
+int level;      // the value 0..255 for the output voltage we are trying to produce
+
+
+void SetLevel(int n)
+{
+    level = n & 0xff;
+    PORTB = (PORTB & ~3) | (level & 3);     // set low 2 bits on B register
+    PORTD = (PORTD & 3)  | (level & ~3);    // set high 6 bits on D register
+}
+
 
 void setup()
 {
-    PIND   = 0x00;       // disable all pullup resistors on D register
-    PORTD  = 0x00;       // turn off all output pins on D register
-    DDRD   = 0xff;       // all D register pins are outputs
+    PIND   &=  3;             // disable top 6 pullup resistors on D register
+    DDRD   |= ~3;             // top 6 output pins on D register are outputs
 
-    Serial.begin(115200);
+    PINB   &=  ~3;            // disable bottom 2 pullup resistors on B register
+    DDRB   |=   3;            // bottom 2 output pins on B register are outputs
+
+    SetLevel(0);              // start with the lowest output voltage
+
+    Serial.begin(115200);     // overrides settings for PD0 (RX), PD1 (TX)
     delay(1000);
     Serial.println("# READY");
 }
+
 
 
 void Sample()
@@ -38,7 +53,7 @@ void Sample()
     int v2 = analogRead(1);     // voltage on diode's anode
 
     // Log the data.
-    Serial.print((int)PORTD);
+    Serial.print(level);
     Serial.print(" ");
     Serial.print(v1);
     Serial.print(" ");
@@ -55,7 +70,7 @@ void loop()
         break;      // do nothing
 
     case RUNNING:
-        if (PORTD == 0)
+        if (level == 0)
         {
             // Should we start another trial run, or are we finished?
             ++trial;
@@ -76,9 +91,9 @@ void loop()
 
         Sample();
 
-        // We cycle through all possible combination of 8 binary outputs on the D register:
+        // We cycle through all possible combination of 8 binary outputs:
         // 0 through 255, to produce 256 possible voltage levels.
-        ++PORTD;
+        SetLevel(level + 1);
         break;
     }
 
@@ -105,13 +120,13 @@ void loop()
 
         case 'h':       // halt
             state = WAITING;
-            PORTD = 0;          // turn off the output voltage
+            SetLevel(0);   // turn off the output voltage
             Serial.println("# HALTED");
             break;
 
         case 'v':       // set voltage to accumulator and halt
             state = WAITING;
-            PORTD = accum;
+            SetLevel(accum);
             accum = 0;
             Sample();
             break;
