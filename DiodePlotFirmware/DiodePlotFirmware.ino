@@ -30,6 +30,23 @@ void setup()
 }
 
 
+void Sample()
+{
+    delay(1);      // Wait a little while for voltage to stabilize.
+
+    int v1 = analogRead(0);     // op-amp output voltage
+    int v2 = analogRead(1);     // voltage on diode's anode
+
+    // Log the data.
+    Serial.print((int)PORTD);
+    Serial.print(" ");
+    Serial.print(v1);
+    Serial.print(" ");
+    Serial.print(v2);
+    Serial.println();
+}
+
+
 void loop()
 {
     switch (state)
@@ -57,18 +74,7 @@ void loop()
             Serial.println();
         }
 
-        delay(1);      // Wait a little while for voltage to stabilize.
-
-        int v1 = analogRead(0);     // op-amp output voltage
-        int v2 = analogRead(1);     // voltage on diode's anode
-
-        // Log the data.
-        Serial.print((int)PORTD);
-        Serial.print(" ");
-        Serial.print(v1);
-        Serial.print(" ");
-        Serial.print(v2);
-        Serial.println();
+        Sample();
 
         // We cycle through all possible combination of 8 binary outputs on the D register:
         // 0 through 255, to produce 256 possible voltage levels.
@@ -94,6 +100,7 @@ void loop()
             state = RUNNING;
             trial = 0;
             limit = accum;
+            accum = 0;
             break;
 
         case 'h':       // halt
@@ -102,8 +109,11 @@ void loop()
             Serial.println("# HALTED");
             break;
 
-        case '?':       // confirm alive
-            Serial.println("# OK");
+        case 'v':       // set voltage to accumulator and halt
+            state = WAITING;
+            PORTD = accum;
+            accum = 0;
+            Sample();
             break;
 
         default:
