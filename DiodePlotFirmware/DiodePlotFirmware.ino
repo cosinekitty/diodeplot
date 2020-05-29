@@ -38,8 +38,9 @@ void setup()
 
     SetLevel(0);              // start with the lowest output voltage
 
+    delay(500);
     Serial.begin(115200);     // overrides settings for PD0 (RX), PD1 (TX)
-    delay(1000);
+    delay(500);
     Serial.println("# READY");
 }
 

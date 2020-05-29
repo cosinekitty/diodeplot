@@ -1,2 +1,2 @@
 diode_001.txt   [green-yellow diode #1]
-r1k_002.txt     [1K resistor; measures 0.977 K]
+r1k_002.txt     [1K resistor; measures 0.981 K]
