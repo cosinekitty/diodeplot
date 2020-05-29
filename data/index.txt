@@ -1,3 +1,6 @@
 diode_001.txt       [green-yellow diode #1]
 r1k_002.txt         [1K resistor; measures 0.981 K]
 multi_r1k_002.txt   [0.981 K resistor with multi-sampling histogram]
+ultra_blue_1.txt    [RadioShack Ultra High Brightness 10mm blue LED @ 8000 mcd]
+infrared.txt        [infrared LED]
+red_3.txt           [red LED #3]
