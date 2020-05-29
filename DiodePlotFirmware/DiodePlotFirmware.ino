@@ -177,12 +177,22 @@ public:
 
     void Print() const
     {
+        // Print the smallest possible central section of the tally array
+        // without omitting any nonzero counts.
+        int left = 0;
+        int right = HISTOGRAM_BUFFER - 1;
+        while (tally[left] == 0 && tally[right] == 0 && left < right)
+        {
+            ++left;
+            --right;
+        }
+
         Serial.print(" ");
         Serial.print(center);
         Serial.print(" [");
-        for (int index=0; index < HISTOGRAM_BUFFER; ++index)
+        for (int index = left; index <= right; ++index)
         {
-            if (index > 0)
+            if (index > left)
                 Serial.print(" ");
             Serial.print(tally[index]);
         }
