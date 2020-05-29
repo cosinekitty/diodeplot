@@ -187,8 +187,28 @@ public:
             --right;
         }
 
+        // See if we can make the output even smaller by choosing a different center.
+        // We must print an odd number of counts.
+        // We have already removed as many outside pairs of zeroes as possible.
+        // Now check to see if we can remove pairs of zeros both on the left,
+        // or both on the right.
+
+        int better_center = center;
+
+        while (right-left >= 2 && tally[left] == 0 && tally[left+1] == 0)
+        {
+            left += 2;
+            ++better_center;
+        }
+
+        while (right-left >= 2 && tally[right] == 0 && tally[right-1] == 0)
+        {
+            right -= 2;
+            --better_center;
+        }
+
         Serial.print(" ");
-        Serial.print(center);
+        Serial.print(better_center);
         Serial.print(" [");
         for (int index = left; index <= right; ++index)
         {
