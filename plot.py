@@ -15,7 +15,10 @@ import matplotlib.pyplot as plt
 R9 = 0.3272     # measured value of the resistor in series with the diode, in K ohms
 
 def Voltage(a):
-    return 0.005 * a
+    # Based on linear regression analysis, comparing
+    # analog input values (0..1023) versus voltage readings
+    # taken with a RadioShack multimeter.
+    return (0.004983 * a) + 0.010523
 
 class Sample:
     def __init__(self, n, a1, a2):
@@ -31,8 +34,23 @@ class Sample:
         if varname == 'v2':
             return Voltage(self.a2)
         if varname == 'i':
-            return (Voltage(self.a1-self.a2)) / R9
+            return (Voltage(self.a1)-Voltage(self.a2)) / R9
         raise Exception('Invalid variable name: ' + varname)
+
+    def __repr__(self):
+        return '[n={}, a1={}, a2={}]'.format(self.n, self.a1, self.a2)
+
+
+def Mean(center, hist):
+    n = len(hist)
+    if (n < 1) or (n & 1) != 1:
+        raise Exception('Invalid histogram length: {}'.format(n))
+    middle = (n-1) // 2
+    samples = sum(hist)
+    if samples <= 0:
+        raise Exception('Total count was not positive')
+    weight = sum(hist[i] * (center+(i-middle)) for i in range(n))
+    return weight / samples
 
 
 def LoadData(filename):
@@ -43,14 +61,26 @@ def LoadData(filename):
             line = line.strip()
             lnum += 1
             if (line != '') and (not line.startswith('#')):
+                # Look for "multisampling histogram" format that looks like this;
+                # 26 104 [0 0 33 961 6 0 0] 77 [0 0 13 782 205 0 0]
+                m = re.match(r'^(\d+)\s+(\d+)\s+\[([^\]]*)\]\s+(\d+)\s+\[([^\]]*)\]\s*$', line)
+                if m:
+                    n = int(m.group(1))
+                    a1 = int(m.group(2))
+                    h1 = [int(s) for s in m.group(3).split()]
+                    a2 = int(m.group(4))
+                    h2 = [int(s) for s in m.group(5).split()]
+                    data.append(Sample(n, Mean(a1,h1), Mean(a2,h2)))
+                    continue
                 m = re.match(r'^(\d+)\s+(\d+)\s+(\d+)$', line)
-                if not m:
-                    print('ERROR({} line {}): invalid data format'.format(filename, lnum))
-                    sys.exit(1)
-                n = int(m.group(1))
-                a1 = int(m.group(2))
-                a2 = int(m.group(3))
-                data.append(Sample(n, a1, a2))
+                if m:
+                    n = int(m.group(1))
+                    a1 = int(m.group(2))
+                    a2 = int(m.group(3))
+                    data.append(Sample(n, a1, a2))
+                    continue
+                print('ERROR({} line {}): invalid data format'.format(filename, lnum))
+                sys.exit(1)
     return data
 
 

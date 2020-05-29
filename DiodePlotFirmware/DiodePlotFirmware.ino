@@ -9,8 +9,9 @@
 
 enum RunState
 {
-    WAITING,
-    RUNNING,
+    WAITING,            // sitting idle, waiting for a command from the user
+    SAMPLING,           // sweep through voltages, sampling each once, for the number of trials in 'accum'
+    MULTI_SAMPLING,     // sweep through voltages once, but sample each 'accum' times
 };
 
 RunState state = WAITING;
@@ -18,14 +19,6 @@ int trial = 0;
 int limit = 10;
 int accum;
 int level;      // the value 0..255 for the output voltage we are trying to produce
-
-
-void SetLevel(int n)
-{
-    level = n & 0xff;
-    PORTB = (PORTB & ~3) | (level & 3);     // set low 2 bits on B register
-    PORTD = (PORTD & 3)  | (level & ~3);    // set high 6 bits on D register
-}
 
 
 void setup()
@@ -45,6 +38,33 @@ void setup()
 }
 
 
+void loop()
+{
+    switch (state)
+    {
+    case WAITING:
+        break;      // do nothing
+
+    case SAMPLING:
+        SingleSample();
+        break;
+
+    case MULTI_SAMPLING:
+        MultiSample();
+        break;
+    }
+
+    ProcessSerialInput();
+}
+
+
+void SetLevel(int n)
+{
+    level = n & 0xff;
+    PORTB = (PORTB & ~3) | (level & 3);     // set low 2 bits on B register
+    PORTD = (PORTD & 3)  | (level & ~3);    // set high 6 bits on D register
+}
+
 
 void Sample()
 {
@@ -63,66 +83,160 @@ void Sample()
 }
 
 
-void loop()
+void SingleSample()
 {
-    switch (state)
+    if (level == 0)
     {
-    case WAITING:
-        break;      // do nothing
-
-    case RUNNING:
-        if (level == 0)
+        // Should we start another trial run, or are we finished?
+        ++trial;
+        if (trial > limit)
         {
-            // Should we start another trial run, or are we finished?
-            ++trial;
-            if (trial > limit)
-            {
-                // We have finished.
-                Serial.println("# FINISHED");
-                state = WAITING;
-                return;
-            }
-
-            Serial.print("# trial ");
-            Serial.print(trial);
-            Serial.print(" of ");
-            Serial.print(limit);
-            Serial.println();
+            // We have finished.
+            Serial.println("# FINISHED");
+            state = WAITING;
+            return;
         }
 
-        Sample();
-
-        // We cycle through all possible combination of 8 binary outputs:
-        // 0 through 255, to produce 256 possible voltage levels.
-        SetLevel(level + 1);
-        break;
+        Serial.print("# trial ");
+        Serial.print(trial);
+        Serial.print(" of ");
+        Serial.print(limit);
+        Serial.println();
     }
 
+    Sample();
+
+    // We cycle through all possible combination of 8 binary outputs:
+    // 0 through 255, to produce 256 possible voltage levels.
+    SetLevel(level + 1);
+}
+
+
+void Halt()
+{
+    state = WAITING;
+    SetLevel(0);   // turn off the output voltage
+    Serial.println("# HALTED");
+}
+
+
+const int MAX_READING_SPREAD = 3;       // how far from the initial analog reading do we tolerate?
+const int HISTOGRAM_BUFFER = (2 * MAX_READING_SPREAD) + 1;
+
+class Histogram
+{
+private:
+    int center;     // the first analog reading defines the "center" of the array at index tally[MAX_READING_SPREAD].
+    unsigned tally[HISTOGRAM_BUFFER];
+
+public:
+    Histogram()
+        : center(-1)        // indicates we have not ready any data yet
+    {
+        for (int i=0; i < HISTOGRAM_BUFFER; ++i)
+            tally[i] = 0;
+    }
+
+    bool Add(int analog)
+    {
+        if (center < 0)
+            center = analog;
+
+        int index = (analog-center) + MAX_READING_SPREAD;
+        if (index < 0 || index >= HISTOGRAM_BUFFER)
+        {
+            Serial.println("# FAIL: analog reading is too erratic.");
+            Halt();
+            return false;
+        }
+
+        ++tally[index];
+        return true;
+    }
+
+    void Print() const
+    {
+        Serial.print(" ");
+        Serial.print(center);
+        Serial.print(" [");
+        for (int index=0; index < HISTOGRAM_BUFFER; ++index)
+        {
+            if (index > 0)
+                Serial.print(" ");
+            Serial.print(tally[index]);
+        }
+        Serial.print("]");
+    }
+};
+
+
+void MultiSample()
+{
+    Histogram h1;   // histogram for v1 readings
+    Histogram h2;   // histogram for v2 readings
+
+    delay(1);
+
+    // Take a series of measurements and tally the different measurements.
+    for (int count=0; count < limit; ++count)
+    {
+        int v1 = analogRead(0);     // op-amp output voltage
+        int v2 = analogRead(1);     // voltage on diode's anode
+
+        if (!h1.Add(v1) || !h2.Add(v2))
+            return;     // bail out if an error occurs
+    }
+
+    // Write the results to the serial monitor.
+    Serial.print(level);
+    h1.Print();
+    h2.Print();
+    Serial.println();
+
+    // We cycle through all possible combination of 8 binary outputs:
+    // 0 through 255, to produce 256 possible voltage levels.
+    SetLevel(level + 1);
+    if (level == 0)
+    {
+        // We have finished the multi-sample trial.
+        Serial.println("# FINISHED");
+        state = WAITING;
+        return;
+    }
+}
+
+
+void ProcessSerialInput()
+{
     while (Serial.available() > 0)
     {
         char c = Serial.read();
         switch (c)
         {
-        case 'z':       // reset and print accumulator
-            accum = 0;
-            // fall through to print
-        case 'a':       // print accumulator
+        case 'a':       // print accumulator; can also use this to test the serial connection
             Serial.print("# accum = ");
             Serial.print(accum);
             Serial.println();
             break;
 
-        case 'r':       // run or restart
-            state = RUNNING;
+        case 'h':       // halt
+            Halt();
+            break;
+
+        case 'm':       // multi-sample mode
+            state = MULTI_SAMPLING;
             trial = 0;
             limit = accum;
             accum = 0;
+            SetLevel(0);
             break;
 
-        case 'h':       // halt
-            state = WAITING;
-            SetLevel(0);   // turn off the output voltage
-            Serial.println("# HALTED");
+        case 'r':       // run or restart
+            state = SAMPLING;
+            trial = 0;
+            limit = accum;
+            accum = 0;
+            SetLevel(0);
             break;
 
         case 'v':       // set voltage to accumulator and halt
@@ -133,9 +247,11 @@ void loop()
             break;
 
         default:
+            // Append a decimal digit to the accumulator.
+            // Does not check for integer overflow.
             if (c >= '0' && c <= '9')
                 accum = (10 * accum) + (c - '0');
-                break;
+            break;
         }
     }
 }
