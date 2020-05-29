@@ -120,7 +120,7 @@ void Halt()
 }
 
 
-const int MAX_READING_SPREAD = 3;       // how far from the initial analog reading do we tolerate?
+const int MAX_READING_SPREAD = 8;       // how far from the initial analog reading do we tolerate?
 const int HISTOGRAM_BUFFER = (2 * MAX_READING_SPREAD) + 1;
 
 class Histogram
@@ -145,8 +145,29 @@ public:
         int index = (analog-center) + MAX_READING_SPREAD;
         if (index < 0 || index >= HISTOGRAM_BUFFER)
         {
-            Serial.println("# FAIL: analog reading is too erratic.");
-            Halt();
+            // The reading went outside our window.
+            // If possible, adjust the window so we can continue the experiment.
+            if (index == -1 && tally[HISTOGRAM_BUFFER-1] == 0)
+            {
+                // We can move everything right by one slot.
+                --center;
+                for (int i=HISTOGRAM_BUFFER-1; i > 0; --i)
+                    tally[i] = tally[i-1];
+                tally[0] = 1;   // include the new data point
+                return true;
+            }
+
+            if (index == HISTOGRAM_BUFFER && tally[0] == 0)
+            {
+                // We can move everything left by one slot.
+                ++center;
+                for (int i=0; i < HISTOGRAM_BUFFER-1; ++i)
+                    tally[i] = tally[i+1];
+                tally[HISTOGRAM_BUFFER-1] = 1;  // include the new data point
+                return true;
+            }
+
+            // We just can't salvage this data.
             return false;
         }
 
@@ -184,7 +205,12 @@ void MultiSample()
         int v2 = analogRead(1);     // voltage on diode's anode
 
         if (!h1.Add(v1) || !h2.Add(v2))
-            return;     // bail out if an error occurs
+        {
+            // Reading was too erratic to fit inside the histogram.
+            Serial.println("# FAIL: readings were too erratic");
+            Halt();
+            return;
+        }
     }
 
     // Write the results to the serial monitor.
