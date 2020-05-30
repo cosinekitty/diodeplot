@@ -103,19 +103,23 @@ def Description(varname):
     raise Exception('Unknown variable: ' + varname)
 
 
-def PlotFile(xvar, yvar, filename):
+def PlotFile(xvar, yvar, filename, outImageFileName = None):
     f = DataFile(filename)
     xlist = []
     ylist = []
     for d in f.data:
         xlist.append(d.GetVar(xvar))
         ylist.append(d.GetVar(yvar))
-    plt.plot(xlist, ylist, 'b.')
+    plt.figure(figsize=(11, 8.5), dpi=100)
+    plt.plot(xlist, ylist, 'b.', markersize=3)
     plt.title(f.title or filename)
     plt.xlabel(Description(xvar))
     plt.ylabel(Description(yvar))
     plt.grid()
-    plt.show()
+    if outImageFileName:
+        plt.savefig(outImageFileName, dpi=100, bbox_inches='tight')
+    else:
+        plt.show()
     plt.close('all')    # free all memory
     return 0
 
@@ -124,8 +128,11 @@ if __name__ == '__main__':
     if len(sys.argv) == 4:
         sys.exit(PlotFile(sys.argv[1], sys.argv[2], sys.argv[3]))
 
+    if len(sys.argv) == 5:
+        sys.exit(PlotFile(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]))
+
     print(r'''
-USAGE:  plot.py x y datafile.txt
+USAGE:  plot.py x y datafile.txt [outfile.png]
 
 Where x and y are each one of the following:
 
@@ -133,5 +140,9 @@ Where x and y are each one of the following:
     v1 = measured voltage coming out of the op-amp.
     v2 = measured voltage fed into the test device.
     i  = deduced current calculated as (v1-v2)/R.
+
+If outfile.png is provided on the command line, the image
+is saved directly to that file.
+Otherwise, the graph is shown interactively.
 ''')
     sys.exit(1)
