@@ -59,6 +59,7 @@ class DataFile:
         self.data = []
         self.filename = filename
         self.title = ''
+        direction = +1  # assume FORWARD bias unless we see otherwise
         with open(filename, 'rt') as infile:
             for line in infile:
                 line = line.strip()
@@ -70,6 +71,12 @@ class DataFile:
                     if line.startswith('[') and line.endswith(']'):
                         self.title = line[1:-1]
                     continue
+                if line == 'FORWARD':
+                    direction = +1
+                    continue
+                if line == 'REVERSE':
+                    direction = -1
+                    continue
                 # Look for "multisampling histogram" format that looks like this;
                 # 26 104 [0 0 33 961 6 0 0] 77 [0 0 13 782 205 0 0]
                 m = re.match(r'^(\d+)\s+(\d+)\s+\[([^\]]*)\]\s+(\d+)\s+\[([^\]]*)\]\s*$', line)
@@ -79,14 +86,7 @@ class DataFile:
                     h1 = [int(s) for s in m.group(3).split()]
                     a2 = int(m.group(4))
                     h2 = [int(s) for s in m.group(5).split()]
-                    self.data.append(Sample(n, Mean(a1,h1), Mean(a2,h2)))
-                    continue
-                m = re.match(r'^(\d+)\s+(\d+)\s+(\d+)$', line)
-                if m:
-                    n = int(m.group(1))
-                    a1 = int(m.group(2))
-                    a2 = int(m.group(3))
-                    self.data.append(Sample(n, a1, a2))
+                    self.data.append(Sample(direction * n, direction * Mean(a1,h1), direction * Mean(a2,h2)))
                     continue
                 raise Exception('Invalid data format at {} line {}'.format(filename, lnum))
 
@@ -114,6 +114,7 @@ def PlotFile(xvar, yvar, filename):
     plt.title(f.title or filename)
     plt.xlabel(Description(xvar))
     plt.ylabel(Description(yvar))
+    plt.grid()
     plt.show()
     plt.close('all')    # free all memory
     return 0

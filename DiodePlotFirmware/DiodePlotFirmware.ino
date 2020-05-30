@@ -10,13 +10,12 @@
 enum RunState
 {
     WAITING,            // sitting idle, waiting for a command from the user
-    SAMPLING,           // sweep through voltages, sampling each once, for the number of trials in 'accum'
-    MULTI_SAMPLING,     // sweep through voltages once, but sample each 'accum' times
+    MULTI_SAMPLING,     // measure and log device behavior at 256 different voltages
 };
 
+
 RunState state = WAITING;
-int trial = 0;
-int limit = 10;
+int limit;
 int accum;
 int level;      // the value 0..255 for the output voltage we are trying to produce
 
@@ -44,10 +43,6 @@ void loop()
     {
     case WAITING:
         break;      // do nothing
-
-    case SAMPLING:
-        SingleSample();
-        break;
 
     case MULTI_SAMPLING:
         MultiSample();
@@ -80,35 +75,6 @@ void Sample()
     Serial.print(" ");
     Serial.print(v2);
     Serial.println();
-}
-
-
-void SingleSample()
-{
-    if (level == 0)
-    {
-        // Should we start another trial run, or are we finished?
-        ++trial;
-        if (trial > limit)
-        {
-            // We have finished.
-            Serial.println("# FINISHED");
-            state = WAITING;
-            return;
-        }
-
-        Serial.print("# trial ");
-        Serial.print(trial);
-        Serial.print(" of ");
-        Serial.print(limit);
-        Serial.println();
-    }
-
-    Sample();
-
-    // We cycle through all possible combination of 8 binary outputs:
-    // 0 through 255, to produce 256 possible voltage levels.
-    SetLevel(level + 1);
 }
 
 
@@ -249,7 +215,7 @@ void MultiSample()
     h2.Print();
     Serial.println();
 
-    // We cycle through all possible combination of 8 binary outputs:
+    // Continue cycling through all possible combination of 8 binary outputs:
     // 0 through 255, to produce 256 possible voltage levels.
     SetLevel(level + 1);
     if (level == 0)
@@ -257,7 +223,6 @@ void MultiSample()
         // We have finished the multi-sample trial.
         Serial.println("# FINISHED");
         state = WAITING;
-        return;
     }
 }
 
@@ -281,15 +246,6 @@ void ProcessSerialInput()
 
         case 'm':       // multi-sample mode
             state = MULTI_SAMPLING;
-            trial = 0;
-            limit = accum;
-            accum = 0;
-            SetLevel(0);
-            break;
-
-        case 'r':       // run or restart
-            state = SAMPLING;
-            trial = 0;
             limit = accum;
             accum = 0;
             SetLevel(0);
