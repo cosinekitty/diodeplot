@@ -53,14 +53,23 @@ def Mean(center, hist):
     return weight / samples
 
 
-def LoadData(filename):
-    lnum = 0
-    data = []
-    with open(filename, 'rt') as infile:
-        for line in infile:
-            line = line.strip()
-            lnum += 1
-            if (line != '') and (not line.startswith('#')):
+class DataFile:
+    def __init__(self, filename):
+        lnum = 0
+        self.data = []
+        self.filename = filename
+        self.title = ''
+        with open(filename, 'rt') as infile:
+            for line in infile:
+                line = line.strip()
+                lnum += 1
+                if line == '':
+                    continue
+                if line.startswith('#'):
+                    line = line[1:].strip()
+                    if line.startswith('[') and line.endswith(']'):
+                        self.title = line[1:-1]
+                    continue
                 # Look for "multisampling histogram" format that looks like this;
                 # 26 104 [0 0 33 961 6 0 0] 77 [0 0 13 782 205 0 0]
                 m = re.match(r'^(\d+)\s+(\d+)\s+\[([^\]]*)\]\s+(\d+)\s+\[([^\]]*)\]\s*$', line)
@@ -70,28 +79,41 @@ def LoadData(filename):
                     h1 = [int(s) for s in m.group(3).split()]
                     a2 = int(m.group(4))
                     h2 = [int(s) for s in m.group(5).split()]
-                    data.append(Sample(n, Mean(a1,h1), Mean(a2,h2)))
+                    self.data.append(Sample(n, Mean(a1,h1), Mean(a2,h2)))
                     continue
                 m = re.match(r'^(\d+)\s+(\d+)\s+(\d+)$', line)
                 if m:
                     n = int(m.group(1))
                     a1 = int(m.group(2))
                     a2 = int(m.group(3))
-                    data.append(Sample(n, a1, a2))
+                    self.data.append(Sample(n, a1, a2))
                     continue
-                print('ERROR({} line {}): invalid data format'.format(filename, lnum))
-                sys.exit(1)
-    return data
+                raise Exception('Invalid data format at {} line {}'.format(filename, lnum))
+
+
+def Description(varname):
+    if varname == 'n':
+        return 'digital output'
+    if varname == 'v1':
+        return 'op-amp output voltage'
+    if varname == 'v2':
+        return 'device voltage'
+    if varname == 'i':
+        return 'device current [mA]'
+    raise Exception('Unknown variable: ' + varname)
 
 
 def PlotFile(xvar, yvar, filename):
-    data = LoadData(filename)
+    f = DataFile(filename)
     xlist = []
     ylist = []
-    for d in data:
+    for d in f.data:
         xlist.append(d.GetVar(xvar))
         ylist.append(d.GetVar(yvar))
     plt.plot(xlist, ylist, 'b.')
+    plt.title(f.title or filename)
+    plt.xlabel(Description(xvar))
+    plt.ylabel(Description(yvar))
     plt.show()
     plt.close('all')    # free all memory
     return 0
