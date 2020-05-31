@@ -6,3 +6,7 @@ The data is captured over the serial monitor and fed through a Python script tha
 Here is an example using a 3V Zener diode:
 
 ![Zener diode plot](https://raw.githubusercontent.com/cosinekitty/diodeplot/master/data/zener3v.png)
+
+Here is the circuit schematic:
+
+![Circuit schematic](https://raw.githubusercontent.com/cosinekitty/diodeplot/master/schematics/dac.png)
