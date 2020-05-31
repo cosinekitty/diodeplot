@@ -227,6 +227,17 @@ void MultiSample()
 }
 
 
+bool IsValidAccumulator(int accum)
+{
+    if (accum <= 0 || accum > 10000)
+    {
+        Serial.println("# ERROR: Accumulator must be set to 1..10000.");
+        return false;
+    }
+    return true;
+}
+
+
 void ProcessSerialInput()
 {
     while (Serial.available() > 0)
@@ -245,17 +256,23 @@ void ProcessSerialInput()
             break;
 
         case 'm':       // multi-sample mode
-            state = MULTI_SAMPLING;
-            limit = accum;
-            accum = 0;
-            SetLevel(0);
+            if (IsValidAccumulator(accum))
+            {
+                state = MULTI_SAMPLING;
+                limit = accum;
+                accum = 0;
+                SetLevel(0);
+            }
             break;
 
         case 'v':       // set voltage to accumulator and halt
-            state = WAITING;
-            SetLevel(accum);
-            accum = 0;
-            Sample();
+            if (IsValidAccumulator(accum))
+            {
+                state = WAITING;
+                SetLevel(accum);
+                accum = 0;
+                Sample();
+            }
             break;
 
         default:
