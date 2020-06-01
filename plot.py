@@ -138,7 +138,7 @@ Where x and y are each one of the following:
 
     n  = the DPORT value 0..255 that is fed into the resistor network.
     v1 = measured voltage coming out of the op-amp.
-    v2 = measured voltage fed into the test device.
+    v2 = measured voltage fed into the test component.
     i  = deduced current calculated as (v1-v2)/R.
 
 If outfile.png is provided on the command line, the image
