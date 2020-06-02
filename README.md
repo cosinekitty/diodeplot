@@ -7,6 +7,11 @@ Here is an example using a 3V Zener diode:
 
 ![Zener diode plot](https://raw.githubusercontent.com/cosinekitty/diodeplot/master/data/zener3v.png)
 
-Here is the circuit schematic:
+# Curcuit Schematic
 
 ![Circuit schematic](https://raw.githubusercontent.com/cosinekitty/diodeplot/master/schematics/dac.png)
+
+# Read More
+
+See the article I wrote explaining this project:
+[Build A Homebrew Current/Voltage Plotter](https://towardsdatascience.com/build-a-homebrew-current-voltage-plotter-88413dfa44d0)
