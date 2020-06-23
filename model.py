@@ -30,15 +30,34 @@ class DataFile:
                     voltage.append(float(row[0]))
                     current.append(float(row[1]))
         self.voltage = array(voltage)
-        self.current = array(voltage)
+        self.current = array(current)
+
 
 def DiodeCurrent(voltage, v0, alpha):
     return exp(alpha*(voltage - v0))
 
 
+def Plot(data, v0, alpha, outImageFileName = None):
+    plt.figure(figsize=(11, 8.5), dpi=100)
+    model = DiodeCurrent(data.voltage, v0, alpha)
+    plt.plot(data.voltage, model, 'g-')
+    plt.plot(data.voltage, data.current, 'b.', markersize=3)
+    #plt.title(f.title or filename)
+    plt.xlabel('Voltage [V]')
+    plt.ylabel('Current [mA]')
+    plt.grid()
+    if outImageFileName:
+        plt.savefig(outImageFileName, dpi=100, bbox_inches='tight')
+    else:
+        plt.show()
+    plt.close('all')    # free all memory
+
+
 def FitCurve(filename):
     data = DataFile(filename)
-    print(curve_fit(DiodeCurrent, data.voltage, data.current))
+    [v0, alpha], _ = curve_fit(DiodeCurrent, data.voltage, data.current)
+    print(v0, alpha)
+    Plot(data, v0, alpha)
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
