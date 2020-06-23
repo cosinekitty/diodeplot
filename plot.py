@@ -10,6 +10,7 @@
 
 import re
 import sys
+import csv
 import matplotlib.pyplot as plt
 
 R9 = 0.3272     # measured value of the resistor in series with the diode, in K ohms
@@ -124,15 +125,33 @@ def PlotFile(xvar, yvar, filename, outImageFileName = None):
     return 0
 
 
+def WriteCsvFile(xvar, yvar, filename, outCsvFileName):
+    f = DataFile(filename)
+    with open(outCsvFileName, 'wt') as outfile:
+        outcsv = csv.writer(outfile)
+        outcsv.writerow([Description(xvar), Description(yvar)])
+        for d in f.data:
+            x = d.GetVar(xvar)
+            y = d.GetVar(yvar)
+            outcsv.writerow([x, y])
+    return 0
+
+
 if __name__ == '__main__':
     if len(sys.argv) == 4:
         sys.exit(PlotFile(sys.argv[1], sys.argv[2], sys.argv[3]))
 
     if len(sys.argv) == 5:
-        sys.exit(PlotFile(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]))
+        outFileName = sys.argv[4]
+        if outFileName.endswith('.png'):
+            sys.exit(PlotFile(sys.argv[1], sys.argv[2], sys.argv[3], outFileName))
+        if outFileName.endswith('.csv'):
+            sys.exit(WriteCsvFile(sys.argv[1], sys.argv[2], sys.argv[3], outFileName))
+        print('ERROR: invalid output filename "{0}" -- must end with .csv or .png.'.format(outFileName))
+        sys.exit(1)
 
     print(r'''
-USAGE:  plot.py x y datafile.txt [outfile.png]
+USAGE:  plot.py x y datafile.txt [outfile.png | outfile.csv]
 
 Where x and y are each one of the following:
 
@@ -141,8 +160,15 @@ Where x and y are each one of the following:
     v2 = measured voltage fed into the test component.
     i  = deduced current calculated as (v1-v2)/R.
 
-If outfile.png is provided on the command line, the image
-is saved directly to that file.
+If outfile.png is provided on the command line
+(that is, any filename whose last 4 characters are ".png"),
+the image is saved directly to that file in PNG format.
+
+If outfile.csv is provided on the command line
+(that is, any filename whose last 4 characters are ".csv"),
+the specified data is saved in CSV format to that file,
+and no graph is generated.
+
 Otherwise, the graph is shown interactively.
 ''')
     sys.exit(1)
