@@ -1,0 +1,9 @@
+#!/bin/bash
+if [[ -z "$1" ]]; then
+    echo "USAGE: run name"
+    exit 1
+fi
+
+./plot.py v2 i data/$1.txt model/$1.csv || exit 1
+./model.py model/$1.csv || exit 1
+exit 0
