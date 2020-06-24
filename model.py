@@ -33,13 +33,13 @@ class DataFile:
         self.current = array(current)
 
 
-def DiodeCurrent(voltage, v0, alpha):
-    return exp(alpha*(voltage - v0))
+def DiodeCurrent(voltage, k, alpha, beta):
+    return (exp(alpha*voltage + beta*(voltage**2)) - 1.0)*k
 
 
-def Plot(data, v0, alpha, outImageFileName = None):
+def Plot(data, k, alpha, beta, outImageFileName = None):
     plt.figure(figsize=(11, 8.5), dpi=100)
-    model = DiodeCurrent(data.voltage, v0, alpha)
+    model = DiodeCurrent(data.voltage, k, alpha, beta)
     plt.plot(data.voltage, model, 'g-')
     plt.plot(data.voltage, data.current, 'b.', markersize=3)
     #plt.title(f.title or filename)
@@ -55,9 +55,9 @@ def Plot(data, v0, alpha, outImageFileName = None):
 
 def FitCurve(filename):
     data = DataFile(filename)
-    [v0, alpha], _ = curve_fit(DiodeCurrent, data.voltage, data.current)
-    print(v0, alpha)
-    Plot(data, v0, alpha)
+    [k, alpha, beta], _ = curve_fit(DiodeCurrent, data.voltage, data.current, maxfev=50000)
+    print(k, alpha, beta)
+    Plot(data, k, alpha, beta)
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
