@@ -40,8 +40,8 @@ def DiodeCurrent(v, A, B, C):
 def Plot(data, A, B, C, outImageFileName = None):
     plt.figure(figsize=(11, 8.5), dpi=100)
     model = DiodeCurrent(data.voltage, A, B, C)
-    plt.plot(data.voltage, model, 'b-')
     plt.plot(data.voltage, data.current, 'r.', markersize=3)
+    plt.plot(data.voltage, model, 'b-')
     #plt.title(f.title or filename)
     plt.xlabel('Voltage [V]')
     plt.ylabel('Current [mA]')
